@@ -1,0 +1,782 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>泰兴市滨江镇信访登记系统</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Noto Sans', sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            padding: 24px 20px;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        /* 登录界面样式 */
+        .login-container {
+            max-width: 450px;
+            margin: 80px auto;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.1);
+            padding: 32px 28px;
+            text-align: center;
+        }
+        .login-container h2 {
+            font-size: 1.6rem;
+            color: #dc2626;
+            margin-bottom: 8px;
+            white-space: nowrap;      /* 强制一行显示 */
+            overflow-x: auto;
+            letter-spacing: 1px;
+        }
+        /* 小屏幕下允许轻微缩小字体，但绝不换行 */
+        @media (max-width: 480px) {
+            .login-container h2 { font-size: 1.3rem; }
+        }
+        .login-container .sub {
+            color: #64748b;
+            margin-bottom: 28px;
+            font-size: 0.85rem;
+        }
+        .login-input {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 18px;
+            border: 1px solid #cbd5e1;
+            border-radius: 28px;
+            font-size: 1rem;
+        }
+        .login-btn {
+            width: 100%;
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: center;      /* 按钮文字居中 */
+            display: inline-block;
+            line-height: normal;
+        }
+        .login-error {
+            color: #dc2626;
+            font-size: 0.85rem;
+            margin-top: 12px;
+        }
+
+        /* 主系统界面 (默认隐藏) */
+        .main-system {
+            display: none;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            transition: all 0.2s;
+        }
+
+        .card-header {
+            font-size: 1.35rem;
+            font-weight: 600;
+            margin-bottom: 18px;
+            border-left: 5px solid #dc2626;
+            padding-left: 14px;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px 24px;
+            margin-bottom: 20px;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field-group label {
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: #334155;
+        }
+        .field-group label span { color: #dc2626; }
+
+        input, textarea, select {
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            background: #fff;
+            outline: none;
+            width: 100%;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220,38,38,0.1);
+        }
+        textarea { resize: vertical; min-height: 70px; }
+
+        button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        button.secondary {
+            background: #f1f5f9;
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
+        }
+        button.secondary:hover { background: #e2e8f0; }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+        .filter-item { flex: 1 1 200px; }
+
+        .stats-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #fef9f9;
+            border-radius: 20px;
+            padding: 12px 18px;
+            flex: 1 1 160px;
+            border: 1px solid #ffe4e4;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .warning-card { background: #fff5f5; border-color: #fecaca; }
+        .warning-card .stat-number { color: #dc2626; }
+        .stat-number { font-size: 28px; font-weight: 800; color: #dc2626; }
+        .stat-label { font-size: 0.8rem; color: #475569; margin-top: 6px; }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid #e9eef3;
+            background: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 1300px;
+        }
+        th {
+            background: #f8fafc;
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f2f5;
+            vertical-align: middle;
+        }
+        tr:hover { background: #fefaf5; }
+        .action-icons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .action-icons button {
+            background: transparent;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            border-radius: 30px;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+        }
+        .action-icons .edit-btn:hover { background: #eef2ff; color: #2563eb; }
+        .action-icons .delete-btn:hover { background: #fee2e2; color: #dc2626; }
+
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .modal-mask {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-container {
+            background: white;
+            border-radius: 28px;
+            max-width: 500px;
+            width: 90%;
+            padding: 24px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+        }
+        .user-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .file-import-label {
+            background: #3b82f6;
+            color: white;
+            border-radius: 40px;
+            padding: 8px 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .file-import-label:hover { background: #2563eb; }
+        #importFileInput { display: none; }
+        .status-badge {
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .user-info {
+            background: white;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logout-btn {
+            background: #e2e8f0;
+            color: #1e293b;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+<!-- 登录界面 -->
+<div id="loginPanel" class="login-container">
+    <h2>📋 泰兴市滨江镇信访登记系统</h2>
+    <div class="sub">请登录以继续</div>
+    <input type="text" id="loginUsername" class="login-input" placeholder="用户名" autocomplete="off">
+    <input type="password" id="loginPassword" class="login-input" placeholder="密码">
+    <button id="loginBtn" class="login-btn">登     录</button>
+    <div id="loginError" class="login-error"></div>
+</div>
+
+<!-- 主系统界面 -->
+<div id="mainSystem" class="main-system">
+    <div class="container">
+        <div class="top-bar">
+            <div class="user-info">
+                <span>👤 <span id="currentUserSpan"></span> (<span id="currentRoleSpan"></span>)</span>
+                <button id="logoutBtn" class="logout-btn secondary">退出登录</button>
+            </div>
+        </div>
+        <div id="adminPanelBtn" style="text-align:right; margin-bottom:12px; display:none;">
+            <button id="userManageBtn" class="secondary">👥 用户管理</button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span>📝 信访案件登记</span>
+                <span class="text-muted" id="editStatusTip"></span>
+            </div>
+            <div class="form-grid">
+                <div class="field-group"><label><span>*</span> 姓名</label><input type="text" id="name" placeholder="例：张建国"></div>
+                <div class="field-group"><label>身份证号码</label><input type="text" id="idCard" placeholder="18位"></div>
+                <div class="field-group"><label>住址</label><input type="text" id="address" placeholder="省市县/详细地址"></div>
+                <div class="field-group"><label>手机号码</label><input type="tel" id="mobile" placeholder="11位手机号"></div>
+                <div class="field-group"><label><span>*</span> 反映内容</label><textarea id="content" placeholder="简述信访事项..."></textarea></div>
+                <div class="field-group"><label>登记时间</label><input type="datetime-local" id="registerTime"></div>
+                <div class="field-group"><label>包案领导</label><input type="text" id="leadingOfficial" placeholder="负责领导姓名/职务"></div>
+                <div class="field-group"><label>责任人</label><input type="text" id="responsiblePerson" placeholder="具体责任人"></div>
+                <div class="field-group"><label>办结时限</label><input type="date" id="deadline" placeholder="YYYY-MM-DD"></div>
+                <div class="field-group"><label>信访形式</label><input type="text" id="letterForm" placeholder="走访、来信等"></div>
+                <div class="field-group"><label>办理方式</label><input type="text" id="handlingMethod" placeholder="转办、交办等"></div>
+                <div class="field-group"><label>化解情况</label><input type="text" id="resolutionStatus" placeholder="可自由填写"></div>
+                <div class="field-group"><label>备注</label><input type="text" id="remark" placeholder="补充说明"></div>
+            </div>
+            <div class="btn-group">
+                <button id="saveBtn">➕ 添加记录</button>
+                <button id="cancelEditBtn" class="secondary" style="display:none;">✖️ 取消编辑</button>
+                <button id="exportCsvBtn" class="secondary admin-only">📎 导出CSV</button>
+                <label class="file-import-label admin-only" id="importLabelBtn">📂 导入表格 (Excel/CSV)</label>
+                <input type="file" id="importFileInput" accept=".xlsx, .xls, .csv, .xlsm">
+                <button id="wordStatBtn" class="secondary">📊 汇总词频统计</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">🔍 查询与筛选</div>
+            <div class="filter-bar">
+                <div class="filter-item"><label>🔎 全局搜索</label><input type="text" id="searchKeyword" placeholder="关键词..."></div>
+                <div class="filter-item"><label>📅 起始日期</label><input type="date" id="startDate"></div>
+                <div class="filter-item"><label>📅 结束日期</label><input type="date" id="endDate"></div>
+                <div class="filter-item"><label>⚖️ 化解情况</label><input type="text" id="filterStatusText" placeholder="关键词"></div>
+                <div class="btn-group" style="margin-top:22px;"><button id="filterBtn">🔍 筛选</button><button id="resetFilterBtn" class="secondary">🗑️ 重置筛选</button></div>
+            </div>
+            <div class="stats-area">
+                <div class="stat-card" id="totalStatCard"><div class="stat-number" id="totalCount">0</div><div class="stat-label">总信访量</div></div>
+                <div class="stat-card" id="filteredStatCard"><div class="stat-number" id="filteredCount">0</div><div class="stat-label">当前筛选结果</div></div>
+                <div class="stat-card" id="monthStatCard"><div class="stat-number" id="monthCount">0</div><div class="stat-label">本月登记数</div></div>
+                <div class="stat-card" id="todayStatCard"><div class="stat-number" id="todayCount">0</div><div class="stat-label">今日登记</div></div>
+                <div class="stat-card warning-card" id="warningStatCard"><div class="stat-number" id="warningCount">0</div><div class="stat-label">⚠️ 限时办结预警 (≤30天)</div></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><span>📋 信访案件登记列表</span><span class="text-muted">支持编辑/筛选</span></div>
+            <div class="table-wrapper">
+                <table id="dataTable"><thead><tr><th>#</th><th>姓名</th><th>身份证号</th><th>住址</th><th>手机号</th><th>反映内容</th><th>登记时间</th><th>包案领导</th><th>责任人</th><th>办结时限</th><th>信访形式</th><th>办理方式</th><th>化解情况</th><th>备注</th><th>操作</th></tr></thead>
+                <tbody id="tableBody"><tr><td colspan="15" style="text-align:center;">加载中...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="paginationArea"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ------------------- 用户管理（基于localStorage）-----------------
+    const USERS_KEY = 'xinfang_users';
+    const SESSION_KEY = 'xinfang_current_user';
+    const RECORDS_KEY = 'xinfang_records_v3';
+
+    let currentUser = null;
+    let records = [];
+    let currentEditId = null;
+    let searchKeyword = '', startDate = '', endDate = '', filterStatusText = '';
+    let currentPage = 1;
+    const PAGE_SIZE = 10;
+    let warningFilterActive = false;
+
+    function initUsers() {
+        let users = localStorage.getItem(USERS_KEY);
+        if (!users) {
+            const defaultUsers = [
+                { username: 'admin', password: 'admin', role: 'admin' }
+            ];
+            localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+        }
+    }
+
+    function login(username, password) {
+        const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+        const user = users.find(u => u.username === username && u.password === password);
+        if (user) {
+            currentUser = { username: user.username, role: user.role };
+            localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+            return true;
+        }
+        return false;
+    }
+
+    function logout() {
+        localStorage.removeItem(SESSION_KEY);
+        currentUser = null;
+        showLoginPanel();
+    }
+
+    function checkSession() {
+        const session = localStorage.getItem(SESSION_KEY);
+        if (session) {
+            currentUser = JSON.parse(session);
+            if (currentUser && currentUser.username) {
+                showMainSystem();
+                return true;
+            }
+        }
+        showLoginPanel();
+        return false;
+    }
+
+    function showLoginPanel() {
+        document.getElementById('loginPanel').style.display = 'block';
+        document.getElementById('mainSystem').style.display = 'none';
+        document.getElementById('loginError').innerText = '';
+    }
+
+    function showMainSystem() {
+        document.getElementById('loginPanel').style.display = 'none';
+        document.getElementById('mainSystem').style.display = 'block';
+        document.getElementById('currentUserSpan').innerText = currentUser.username;
+        document.getElementById('currentRoleSpan').innerText = currentUser.role === 'admin' ? '管理员' : '普通用户';
+        const isAdmin = (currentUser.role === 'admin');
+        document.getElementById('adminPanelBtn').style.display = isAdmin ? 'block' : 'none';
+        document.querySelectorAll('.admin-only').forEach(el => {
+            el.style.display = isAdmin ? 'inline-flex' : 'none';
+        });
+        renderTable();
+    }
+
+    function openUserManager() {
+        const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+        const modal = document.createElement('div');
+        modal.className = 'modal-mask';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width:550px;">
+                <h3>👥 用户管理</h3>
+                <div id="userListContainer" style="max-height:300px; overflow-y:auto; margin:15px 0;"></div>
+                <div style="display:flex; gap:12px; margin-top:16px;">
+                    <button id="addUserBtn" class="secondary">➕ 新增用户</button>
+                    <button id="closeUserModalBtn" class="secondary">关闭</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const refreshUserList = () => {
+            const currentUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+            const container = modal.querySelector('#userListContainer');
+            container.innerHTML = currentUsers.map(u => `
+                <div class="user-list-item">
+                    <div><strong>${escapeHtml(u.username)}</strong> (${u.role === 'admin' ? '管理员' : '普通用户'})</div>
+                    <div>
+                        <button class="edit-user-btn secondary" data-username="${u.username}" style="padding:2px 12px;">修改</button>
+                        ${u.username !== 'admin' ? `<button class="delete-user-btn secondary" data-username="${u.username}" style="padding:2px 12px;">删除</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            modal.querySelectorAll('.edit-user-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const username = btn.dataset.username;
+                    editUserDialog(username);
+                    modal.remove();
+                });
+            });
+            modal.querySelectorAll('.delete-user-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const username = btn.dataset.username;
+                    if (confirm(`确定删除用户 "${username}" 吗？`)) {
+                        let usersArr = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+                        usersArr = usersArr.filter(u => u.username !== username);
+                        localStorage.setItem(USERS_KEY, JSON.stringify(usersArr));
+                        refreshUserList();
+                    }
+                });
+            });
+        };
+        refreshUserList();
+        modal.querySelector('#addUserBtn').addEventListener('click', () => {
+            const newUsername = prompt('请输入新用户名（字母数字组合）');
+            if (!newUsername) return;
+            const newPassword = prompt('请输入密码');
+            if (!newPassword) return;
+            const role = confirm('设置为管理员？\n确定=管理员，取消=普通用户') ? 'admin' : 'user';
+            const usersArr = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+            if (usersArr.find(u => u.username === newUsername)) {
+                alert('用户名已存在');
+                return;
+            }
+            usersArr.push({ username: newUsername, password: newPassword, role });
+            localStorage.setItem(USERS_KEY, JSON.stringify(usersArr));
+            refreshUserList();
+        });
+        modal.querySelector('#closeUserModalBtn').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => { if(e.target === modal) modal.remove(); });
+    }
+
+    function editUserDialog(username) {
+        const usersArr = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+        const user = usersArr.find(u => u.username === username);
+        if (!user) return;
+        const newPassword = prompt(`修改用户 "${username}" 的密码（留空则不修改）`, '');
+        if (newPassword !== null && newPassword.trim() !== '') {
+            user.password = newPassword;
+            localStorage.setItem(USERS_KEY, JSON.stringify(usersArr));
+            alert('密码已更新');
+        }
+        const newRole = confirm(`当前角色: ${user.role === 'admin' ? '管理员' : '普通用户'}\n是否切换为${user.role === 'admin' ? '普通用户' : '管理员'}？`);
+        if (newRole) {
+            user.role = user.role === 'admin' ? 'user' : 'admin';
+            localStorage.setItem(USERS_KEY, JSON.stringify(usersArr));
+            alert('角色已更新');
+        }
+    }
+
+    function loadRecords() {
+        const stored = localStorage.getItem(RECORDS_KEY);
+        if (stored) records = JSON.parse(stored);
+        else {
+            const now = new Date();
+            const defaultTime = now.toISOString().slice(0,16);
+            const yesterday = new Date(now); yesterday.setDate(now.getDate()-1);
+            const yesterdayStr = yesterday.toISOString().slice(0,16);
+            const todayStr = now.toISOString().slice(0,10);
+            const future5 = new Date(); future5.setDate(now.getDate()+5);
+            const future15 = new Date(); future15.setDate(now.getDate()+15);
+            const future45 = new Date(); future45.setDate(now.getDate()+45);
+            const pastDate = new Date(); pastDate.setDate(now.getDate()-2);
+            records = [
+                { id: 3001, name: '李为民', idCard: '410***************', address: '泰兴市滨江镇', mobile: '13812345678', content: '反映征地拆迁补偿标准不合理', registerTime: defaultTime, leadingOfficial: '张副市长', responsiblePerson: '王科长', deadline: todayStr, letterForm: '走访', handlingMethod: '转办', resolutionStatus: '正在化解', remark: '今天到期预警' },
+                { id: 3002, name: '王淑芳', idCard: '420***************', address: '泰兴市滨江镇', mobile: '13987654321', content: '老旧小区改造噪音扰民问题', registerTime: yesterdayStr, leadingOfficial: '李局长', responsiblePerson: '赵主任', deadline: future5.toISOString().slice(0,10), letterForm: '来信', handlingMethod: '交办', resolutionStatus: '未化解', remark: '5天后到期' },
+                { id: 3003, name: '张振国', idCard: '510***************', address: '泰兴市滨江镇', mobile: '15233445566', content: '社保补缴政策咨询与投诉', registerTime: defaultTime, leadingOfficial: '王处长', responsiblePerson: '孙经办', deadline: future15.toISOString().slice(0,10), letterForm: '网上投诉', handlingMethod: '自办', resolutionStatus: '已化解', remark: '15天后到期' },
+                { id: 3004, name: '陈国庆', idCard: '320***************', address: '泰兴市滨江镇', mobile: '15912345678', content: '环境污染投诉', registerTime: defaultTime, leadingOfficial: '周镇长', responsiblePerson: '环保所', deadline: future45.toISOString().slice(0,10), letterForm: '走访', handlingMethod: '转办', resolutionStatus: '办理中', remark: '45天后到期' },
+                { id: 3005, name: '赵秀英', idCard: '340***************', address: '泰兴市滨江镇', mobile: '18765432100', content: '低保申请问题', registerTime: defaultTime, leadingOfficial: '刘书记', responsiblePerson: '民政科', deadline: pastDate.toISOString().slice(0,10), letterForm: '来信', handlingMethod: '交办', resolutionStatus: '已过期', remark: '已过期' }
+            ];
+            persistRecords();
+        }
+    }
+    function persistRecords() { localStorage.setItem(RECORDS_KEY, JSON.stringify(records)); }
+
+    function formatDateTime(str) { return str ? str.replace('T',' ').substring(0,16) : ''; }
+    function getWarningCount() {
+        const today = new Date(); today.setHours(0,0,0,0);
+        return records.filter(r => {
+            if(!r.deadline) return false;
+            const dl = new Date(r.deadline);
+            if(isNaN(dl)) return false;
+            dl.setHours(0,0,0,0);
+            const diff = Math.ceil((dl - today) / (86400000));
+            return diff >=0 && diff <=30;
+        }).length;
+    }
+    function getWarningFiltered(list) {
+        const today = new Date(); today.setHours(0,0,0,0);
+        return list.filter(r => {
+            if(!r.deadline) return false;
+            const dl = new Date(r.deadline);
+            if(isNaN(dl)) return false;
+            dl.setHours(0,0,0,0);
+            const diff = Math.ceil((dl - today) / (86400000));
+            return diff >=0 && diff <=30;
+        });
+    }
+    function filterRecordsList() {
+        if(warningFilterActive) return getWarningFiltered(records);
+        let filtered = [...records];
+        const kw = searchKeyword.trim().toLowerCase();
+        if(kw) filtered = filtered.filter(r => r.name.includes(kw) || (r.idCard||'').includes(kw) || r.content.includes(kw) || (r.remark||'').includes(kw) || (r.leadingOfficial||'').includes(kw) || (r.responsiblePerson||'').includes(kw));
+        if(startDate) filtered = filtered.filter(r => r.registerTime && r.registerTime.slice(0,10) >= startDate);
+        if(endDate) filtered = filtered.filter(r => r.registerTime && r.registerTime.slice(0,10) <= endDate);
+        if(filterStatusText.trim()) filtered = filtered.filter(r => (r.resolutionStatus||'').toLowerCase().includes(filterStatusText.toLowerCase()));
+        filtered.sort((a,b)=>(b.registerTime||'').localeCompare(a.registerTime||''));
+        return filtered;
+    }
+    function renderTable() {
+        const filtered = filterRecordsList();
+        const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+        if(currentPage>totalPages && totalPages>0) currentPage=totalPages;
+        if(currentPage<1) currentPage=1;
+        const pageData = filtered.slice((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE);
+        const tbody = document.getElementById('tableBody');
+        if(!pageData.length) tbody.innerHTML = '<tr><td colspan="15">暂无数据</td></tr>';
+        else {
+            tbody.innerHTML = pageData.map((rec, idx) => {
+                const isWarning = (()=>{
+                    if(!rec.deadline) return false;
+                    const today=new Date(); today.setHours(0,0,0,0);
+                    const dl=new Date(rec.deadline);
+                    if(isNaN(dl)) return false;
+                    dl.setHours(0,0,0,0);
+                    const diff=Math.ceil((dl-today)/86400000);
+                    return diff>=0 && diff<=30;
+                })();
+                const rowStyle = isWarning ? 'style="background:#fff5f5;"' : '';
+                const isAdmin = currentUser && currentUser.role === 'admin';
+                const deleteBtn = isAdmin ? `<button class="delete-btn" data-id="${rec.id}">🗑️ 删除</button>` : '';
+                return `<tr ${rowStyle}>
+                    <td>${(currentPage-1)*PAGE_SIZE + idx+1}</td>
+                    <td><strong>${escapeHtml(rec.name)}</strong></td>
+                    <td>${escapeHtml(rec.idCard||'—')}</td><td>${escapeHtml(rec.address||'—')}</td><td>${escapeHtml(rec.mobile||'—')}</td>
+                    <td>${escapeHtml(rec.content.substring(0,60))}${rec.content.length>60?'…':''}</td>
+                    <td>${formatDateTime(rec.registerTime)}</td>
+                    <td>${escapeHtml(rec.leadingOfficial||'—')}</td><td>${escapeHtml(rec.responsiblePerson||'—')}</td>
+                    <td>${escapeHtml(rec.deadline?rec.deadline.slice(0,10):'—')}</td>
+                    <td>${escapeHtml(rec.letterForm||'—')}</td><td>${escapeHtml(rec.handlingMethod||'—')}</td>
+                    <td><span class="status-badge">${escapeHtml(rec.resolutionStatus||'未填写')}</span></td>
+                    <td>${escapeHtml(rec.remark||'—')}</td>
+                    <td class="action-icons"><button class="edit-btn" data-id="${rec.id}">✏️ 编辑</button>${deleteBtn}</td>
+                 </tr>`;
+            }).join('');
+        }
+        document.querySelectorAll('.edit-btn').forEach(btn=>btn.addEventListener('click',()=>startEdit(Number(btn.dataset.id))));
+        if(currentUser.role==='admin') document.querySelectorAll('.delete-btn').forEach(btn=>btn.addEventListener('click',()=>{if(confirm('删除记录？')) deleteRecord(Number(btn.dataset.id));}));
+        const paginationDiv = document.getElementById('paginationArea');
+        if(totalPages<=1) paginationDiv.innerHTML='';
+        else paginationDiv.innerHTML = `<button class="secondary" id="prevPageBtn" ${currentPage===1?'disabled':''}>◀ 上一页</button><span>第 ${currentPage}/${totalPages} 页</span><button class="secondary" id="nextPageBtn" ${currentPage===totalPages?'disabled':''}>下一页 ▶</button>`;
+        document.getElementById('prevPageBtn')?.addEventListener('click',()=>{if(currentPage>1){currentPage--;renderTable();}});
+        document.getElementById('nextPageBtn')?.addEventListener('click',()=>{if(currentPage<totalPages){currentPage++;renderTable();}});
+        updateStats();
+    }
+    function updateStats() {
+        document.getElementById('totalCount').innerText = records.length;
+        document.getElementById('filteredCount').innerText = filterRecordsList().length;
+        const now=new Date();
+        document.getElementById('monthCount').innerText = records.filter(r=>r.registerTime && new Date(r.registerTime).getMonth()===now.getMonth() && new Date(r.registerTime).getFullYear()===now.getFullYear()).length;
+        document.getElementById('todayCount').innerText = records.filter(r=>r.registerTime && new Date(r.registerTime).toDateString()===now.toDateString()).length;
+        document.getElementById('warningCount').innerText = getWarningCount();
+    }
+    function saveRecordHandler() {
+        const name=document.getElementById('name').value.trim();
+        if(!name) {alert('姓名必填');return;}
+        const content=document.getElementById('content').value.trim();
+        if(!content) {alert('反映内容必填');return;}
+        let registerTime=document.getElementById('registerTime').value;
+        if(!registerTime) registerTime=new Date().toISOString().slice(0,16);
+        const newRecord = {
+            id: currentEditId || Date.now(),
+            name, idCard:document.getElementById('idCard').value.trim(), address:document.getElementById('address').value.trim(),
+            mobile:document.getElementById('mobile').value.trim(), content, registerTime,
+            leadingOfficial:document.getElementById('leadingOfficial').value.trim(),
+            responsiblePerson:document.getElementById('responsiblePerson').value.trim(),
+            deadline:document.getElementById('deadline').value,
+            letterForm:document.getElementById('letterForm').value.trim(),
+            handlingMethod:document.getElementById('handlingMethod').value.trim(),
+            resolutionStatus:document.getElementById('resolutionStatus').value.trim(),
+            remark:document.getElementById('remark').value.trim()
+        };
+        if(currentEditId) {
+            const idx=records.findIndex(r=>r.id===currentEditId);
+            if(idx!==-1) records[idx]=newRecord;
+            resetEditMode();
+        } else { records.unshift(newRecord); clearForm(); }
+        persistRecords();
+        renderTable();
+        alert(currentEditId?'修改成功':'添加成功');
+        currentEditId=null;
+    }
+    function startEdit(id) {
+        const rec=records.find(r=>r.id===id);
+        if(!rec) return;
+        currentEditId=id;
+        document.getElementById('name').value=rec.name;
+        document.getElementById('idCard').value=rec.idCard||'';
+        document.getElementById('address').value=rec.address||'';
+        document.getElementById('mobile').value=rec.mobile||'';
+        document.getElementById('content').value=rec.content;
+        document.getElementById('registerTime').value=rec.registerTime||'';
+        document.getElementById('leadingOfficial').value=rec.leadingOfficial||'';
+        document.getElementById('responsiblePerson').value=rec.responsiblePerson||'';
+        document.getElementById('deadline').value=rec.deadline||'';
+        document.getElementById('letterForm').value=rec.letterForm||'';
+        document.getElementById('handlingMethod').value=rec.handlingMethod||'';
+        document.getElementById('resolutionStatus').value=rec.resolutionStatus||'';
+        document.getElementById('remark').value=rec.remark||'';
+        document.getElementById('saveBtn').innerHTML='💾 更新记录';
+        document.getElementById('cancelEditBtn').style.display='inline-flex';
+        document.getElementById('editStatusTip').innerHTML='✏️ 正在编辑：'+rec.name;
+        window.scrollTo({top:0,behavior:'smooth'});
+    }
+    function resetEditMode() {
+        currentEditId=null;
+        clearForm();
+        document.getElementById('saveBtn').innerHTML='➕ 添加记录';
+        document.getElementById('cancelEditBtn').style.display='none';
+        document.getElementById('editStatusTip').innerHTML='';
+    }
+    function clearForm() {
+        document.getElementById('name').value='';document.getElementById('idCard').value='';document.getElementById('address').value='';
+        document.getElementById('mobile').value='';document.getElementById('content').value='';document.getElementById('leadingOfficial').value='';
+        document.getElementById('responsiblePerson').value='';document.getElementById('deadline').value='';document.getElementById('letterForm').value='';
+        document.getElementById('handlingMethod').value='';document.getElementById('resolutionStatus').value='';document.getElementById('remark').value='';
+        const now=new Date();now.setMinutes(now.getMinutes()-now.getTimezoneOffset());
+        document.getElementById('registerTime').value=now.toISOString().slice(0,16);
+    }
+    function deleteRecord(id) { if(currentUser.role!=='admin') return; records=records.filter(r=>r.id!==id); persistRecords(); renderTable(); if(currentEditId===id) resetEditMode(); }
+    function applyFilters() { warningFilterActive=false; searchKeyword=document.getElementById('searchKeyword').value; startDate=document.getElementById('startDate').value; endDate=document.getElementById('endDate').value; filterStatusText=document.getElementById('filterStatusText').value; currentPage=1; renderTable(); }
+    function resetFilters() { warningFilterActive=false; document.getElementById('searchKeyword').value=''; document.getElementById('startDate').value=''; document.getElementById('endDate').value=''; document.getElementById('filterStatusText').value=''; searchKeyword=startDate=endDate=filterStatusText=''; currentPage=1; renderTable(); }
+    function activateWarning() { warningFilterActive=true; document.getElementById('searchKeyword').value=''; document.getElementById('startDate').value=''; document.getElementById('endDate').value=''; document.getElementById('filterStatusText').value=''; searchKeyword=startDate=endDate=filterStatusText=''; currentPage=1; renderTable(); alert('已筛选限时办结预警案件（剩余天数≤30天）'); }
+    function exportCsv() { if(currentUser.role!=='admin') return; const headers=['姓名','身份证号','住址','手机号码','反映内容','登记时间','包案领导','责任人','办结时限','信访形式','办理方式','化解情况','备注']; const rows=records.map(r=>[r.name,r.idCard||'',r.address||'',r.mobile||'',r.content,r.registerTime||'',r.leadingOfficial||'',r.responsiblePerson||'',r.deadline||'',r.letterForm||'',r.handlingMethod||'',r.resolutionStatus||'',r.remark||'']); const csv=[headers,...rows].map(row=>row.map(cell=>`"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n'); const blob=new Blob(["\uFEFF"+csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='泰兴市滨江镇信访案件.csv'; a.click(); URL.revokeObjectURL(a.href); }
+    function importExcel(file) { if(currentUser.role!=='admin') return; const reader=new FileReader(); reader.onload=e=>{ const data=new Uint8Array(e.target.result); const wb=XLSX.read(data,{type:'array'}); const sheet=wb.Sheets[wb.SheetNames[0]]; const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:""}); if(rows.length<2) return; const h=rows[0].map(c=>String(c||"").trim()); const idx={name:h.findIndex(c=>c.includes('姓名')),idCard:h.findIndex(c=>c.includes('身份证')),addr:h.findIndex(c=>c.includes('住址')),mobile:h.findIndex(c=>c.includes('手机')),content:h.findIndex(c=>c.includes('反映内容')),time:h.findIndex(c=>c.includes('登记时间')),leader:h.findIndex(c=>c.includes('包案领导')),resp:h.findIndex(c=>c.includes('责任人')),deadline:h.findIndex(c=>c.includes('办结时限')),form:h.findIndex(c=>c.includes('信访形式')),method:h.findIndex(c=>c.includes('办理方式')),status:h.findIndex(c=>c.includes('化解情况')),remark:h.findIndex(c=>c.includes('备注'))}; let cnt=0; for(let i=1;i<rows.length;i++){ const row=rows[i]; const name=idx.name>=0?String(row[idx.name]||"").trim():""; if(!name) continue; records.push({ id:Date.now()+i, name, idCard:idx.idCard>=0?String(row[idx.idCard]||"").trim():"", address:idx.addr>=0?String(row[idx.addr]||"").trim():"", mobile:idx.mobile>=0?String(row[idx.mobile]||"").trim():"", content:idx.content>=0?String(row[idx.content]||"").trim():"(无内容)", registerTime: (()=>{let t=idx.time>=0?String(row[idx.time]||"").trim():""; if(t&&!t.includes('T')&&t.includes(' ')) t=t.replace(' ','T').substring(0,16); else if(t&&t.length===10) t+='T00:00'; return t||new Date().toISOString().slice(0,16); })(), leadingOfficial:idx.leader>=0?String(row[idx.leader]||"").trim():"", responsiblePerson:idx.resp>=0?String(row[idx.resp]||"").trim():"", deadline:idx.deadline>=0?String(row[idx.deadline]||"").trim():"", letterForm:idx.form>=0?String(row[idx.form]||"").trim():"", handlingMethod:idx.method>=0?String(row[idx.method]||"").trim():"", resolutionStatus:idx.status>=0?String(row[idx.status]||"").trim():"", remark:idx.remark>=0?String(row[idx.remark]||"").trim():"" }); cnt++; } if(cnt) { persistRecords(); renderTable(); alert(`导入${cnt}条记录`); } else alert('无有效数据'); }; reader.readAsArrayBuffer(file); }
+    function wordStat() { const filtered=filterRecordsList(); if(!filtered.length) {alert('无数据');return;} const text=filtered.map(r=>r.content).join(' '); const stop=new Set(['的','了','是','在','和','与','或','有','被','把','这','那','也','都','还','就','但','而','如','等','个','一些','我们','他们','你们','自己','什么','没有','可以','进行','对','给','从','到','上','下','出','来','去','要','会','能','可能','已经','将','被','由','并','且','所以','因为','如果','虽然','但是','然而','对于','关于','一个','这个','那个','这些','那些','这样','那样','怎么','如何','为什么']); const map=new Map(); let m; const re=/[\u4e00-\u9fa5]{2,5}/g; while((m=re.exec(text))!==null){ let w=m[0]; if(!stop.has(w) && w.length>=2) map.set(w,(map.get(w)||0)+1); } if(!map.size){alert('无关键词');return;} const sorted=Array.from(map.entries()).sort((a,b)=>b[1]-a[1]).slice(0,15); const modal=document.createElement('div'); modal.className='modal-mask'; modal.innerHTML=`<div class="modal-container"><h3>📊 高频词汇总</h3><div class="word-list">${sorted.map(([w,c])=>`<div>${escapeHtml(w)} <b style="color:#dc2626;">${c}次</b></div>`).join('')}</div><button id="closeWordBtn" class="secondary">关闭</button></div>`; document.body.appendChild(modal); modal.querySelector('#closeWordBtn').addEventListener('click',()=>modal.remove()); modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();}); }
+    function escapeHtml(s){if(!s)return ''; return s.replace(/[&<>]/g,function(m){if(m==='&')return '&amp;'; if(m==='<')return '&lt;'; if(m==='>')return '&gt;'; return m;});}
+
+    function bindMainEvents() {
+        document.getElementById('saveBtn').addEventListener('click',saveRecordHandler);
+        document.getElementById('cancelEditBtn').addEventListener('click',resetEditMode);
+        document.getElementById('filterBtn').addEventListener('click',applyFilters);
+        document.getElementById('resetFilterBtn').addEventListener('click',resetFilters);
+        document.getElementById('warningStatCard').addEventListener('click',activateWarning);
+        document.getElementById('exportCsvBtn').addEventListener('click',exportCsv);
+        document.getElementById('wordStatBtn').addEventListener('click',wordStat);
+        document.getElementById('importFileInput').addEventListener('change',e=>{if(e.target.files.length) importExcel(e.target.files[0]); e.target.value='';});
+        document.getElementById('userManageBtn')?.addEventListener('click',openUserManager);
+        document.getElementById('logoutBtn').addEventListener('click',()=>{logout();});
+    }
+
+    initUsers();
+    loadRecords();
+    if(checkSession()) {
+        bindMainEvents();
+        renderTable();
+        const nowLocal=new Date(); nowLocal.setMinutes(nowLocal.getMinutes()-nowLocal.getTimezoneOffset());
+        if(!document.getElementById('registerTime').value) document.getElementById('registerTime').value=nowLocal.toISOString().slice(0,16);
+    }
+    document.getElementById('loginBtn').addEventListener('click',()=>{
+        const user=document.getElementById('loginUsername').value.trim();
+        const pwd=document.getElementById('loginPassword').value;
+        if(login(user,pwd)) {
+            document.getElementById('loginError').innerText='';
+            checkSession();
+            bindMainEvents();
+            renderTable();
+        } else document.getElementById('loginError').innerText='用户名或密码错误';
+    });
+</script>
+</body>
+</html>
